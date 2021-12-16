@@ -1,0 +1,59 @@
+import os
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib import pyplot
+
+dict = {}
+
+for folder, subfolders, files in os.walk('/work2/pa21/sgirtsou/production', topdown=True):
+	for file in files:
+		if file.endswith('dummies.csv'):
+                	if file.split('_')[1] in dict:
+                        	dict[file.split('_')[1]].append(os.path.join(os.path.abspath(folder), file))
+                	else:
+                        	dict[file.split('_')[1]]=[]
+                        	dict[file.split('_')[1]].append(os.path.join(os.path.abspath(folder), file))
+
+dict = {'2018':dict['2018'],'2017':dict['2017']}
+print(dict)
+
+
+features = ['max_temp']
+#features = ['max_temp', 'min_temp', 'mean_temp', 'res_max',
+#       'dom_vel', 'rain_7days', 'dem', 'slope', 'curvature', 'aspect',
+#       'ndvi_new', 'evi', 'lst_day', 'lst_night', 'max_dew_temp',
+#       'mean_dew_temp', 'min_dew_temp']
+
+for feature in features:
+	new_list = []
+	fields = [feature,'fire']
+	print(feature)
+	new_dict = {}
+	i = 1
+	for key in dict:
+		dfs = []
+		print(key)
+		for filenames in dict[key]:
+			print(filenames)
+			dfs.append(pd.read_csv(filenames, usecols = fields))
+		import pdb; pdb.set_trace()
+		big_frame = pd.concat(dfs, ignore_index=True)
+		big_frame_1 = pd.DataFrame(big_frame[fields[0]].loc[big_frame['fire']==1],columns=[fields[0]]).assign(year=key).rename(columns={feature: "fire"})
+		big_frame_0 = pd.DataFrame(big_frame[fields[0]].loc[big_frame['fire']==0],columns=[fields[0]]).assign(year=key).rename(columns={feature: "non_fire"})
+		del big_frame
+		new_list.append(big_frame_1)
+		new_list.append(big_frame_0)
+		del dfs
+		import pdb; pdb.set_trace()
+		cdf = pd.concat([pd for pd in new_list], ignore_index = True)
+		mdf = pd.melt(cdf, id_vars=['year'], var_name=['fire'])
+		del cdf
+		fig, ax = pyplot.subplots(ncols=9)
+		sns.boxplot(ax=ax, x="year", y="value", hue="fire", palette = ['red','green'], data=mdf)   
+		ax.set_title(feature)
+	os.chdir('/users/pa21/sgirtsou/transfered_files/august_datasets')
+	plt.savefig(feature+'_yearly.png')
+			
+	
